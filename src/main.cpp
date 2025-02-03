@@ -13,13 +13,15 @@ BLEClient*  pClient;
 bool connected = false;
 
 //BLE Server name (the other ESP32 name running the server sketch)
-#define bleServerName "XIAOESP32C6_BLE"
+#define bleServerName "XIAOESP32C6_BLE_SENDER1"
 
 //Address of the peripheral device. Address will be found during scanning...
 static BLEAddress *pServerAddress;
 
 BLEUUID serviceUUID1(SERVICE_UUID_NODE1);
-BLEUUID charUUID1(CHARACTERISTIC_UUID_NODE1);    
+BLEUUID charUUID1(CHARACTERISTIC_UUID_NODE1);
+
+uint8_t receivedData[8];
 
 
 //Callback function that gets called, when another device's advertisement has been received
@@ -35,6 +37,8 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 
 void setup() {
+  memset(receivedData, 0, sizeof(receivedData));
+
   Serial.begin(115200);
   
   Serial.println("Starting BLE client...");
@@ -84,9 +88,15 @@ void loop() {
     BLERemoteCharacteristic* pCharacteristic = pRemoteService->getCharacteristic(charUUID1);
     pCharacteristic->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData, size_t length, bool isNotify) {
       Serial.println("Notify received");
-      Serial.print("Value: ");
-      Serial.println(*pData);
+      memcpy(receivedData, pData, 8);
+      Serial.println("Received 8-byte data:");
+    for (int i = 0; i < 8; i++) {
+      Serial.print("Byte ");
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.println(receivedData[i], HEX);  // Print in HEX format
+    }
     });
-  }
+  } 
   delay(1000);
 }
