@@ -22,11 +22,11 @@ static BLEAddress *pServerAddress1;
 static BLEAddress *pServerAddress2;
 
 BLEUUID serviceUUID1(SERVICE_UUID_NODE1);
-BLEUUID charUUID1(CHARACTERISTIC_UUID_NODE1);
-
+BLEUUID charUUID1(CHARACTERISTIC_UUID_NODE1);    
 BLEUUID serviceUUID2(SERVICE_UUID_NODE2);
 BLEUUID charUUID2(CHARACTERISTIC_UUID_NODE2);    
 
+uint8_t receivedData[8];
 
 //Callback function that gets called, when another device's advertisement has been received
 class MyAdvertisedDeviceCallbacks1: public BLEAdvertisedDeviceCallbacks {
@@ -50,6 +50,8 @@ class MyAdvertisedDeviceCallbacks2: public BLEAdvertisedDeviceCallbacks {
 };
 
 void setup() {
+  memset(receivedData, 0, sizeof(receivedData));
+
   Serial.begin(115200);
   
   Serial.println("Starting BLE client...");
@@ -134,9 +136,18 @@ void loop() {
     BLERemoteCharacteristic* pCharacteristic2 = pRemoteService2->getCharacteristic(charUUID2);
     pCharacteristic->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData2, size_t length, bool isNotify) {
       Serial.println("Notify received");
+      memcpy(receivedData, pData1, 8);
+      Serial.println("Received 8-byte data:");
+    for (int i = 0; i < 8; i++) {
+      Serial.print("Byte ");
+      Serial.print(i);
+      Serial.print(": ");
+      Serial.println(receivedData[i], HEX);  // Print in HEX format
+    }
+  
       Serial.print("Value: ");
       Serial.println(*pData2);
     });
-  }
+  } 
   delay(1000);
 }
