@@ -124,8 +124,8 @@ void setup() {
   
   connected = true;
 }
-BLERemoteService* pRemoteService1;
-BLERemoteCharacteristic* pCharacteristic;
+static BLERemoteService* pRemoteService1;
+static BLERemoteCharacteristic* pCharacteristic;
 void loop() {
   if (connected) {
     pRemoteService1 = pClient1->getService(serviceUUID1);
