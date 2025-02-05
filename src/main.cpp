@@ -134,20 +134,11 @@ void loop() {
     });
     BLERemoteService* pRemoteService2 = pClient2->getService(serviceUUID2);
     BLERemoteCharacteristic* pCharacteristic2 = pRemoteService2->getCharacteristic(charUUID2);
-    pCharacteristic->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData2, size_t length, bool isNotify) {
+    pCharacteristic->registerForNotify ([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData2, size_t length, bool isNotify) {
       Serial.println("Notify received");
-      memcpy(receivedData, pData1, 8);
-      Serial.println("Received 8-byte data:");
-    for (int i = 0; i < 8; i++) {
-      Serial.print("Byte ");
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(receivedData[i], HEX);  // Print in HEX format
-    }
-  
       Serial.print("Value: ");
       Serial.println(*pData2);
     });
-  } 
+  }
   delay(1000);
 }
