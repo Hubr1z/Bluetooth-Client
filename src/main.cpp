@@ -71,6 +71,28 @@ void setup() {
   pClient1->connect(*pServerAddress1);
   Serial.println(" - Connected to server1");
 
+  // Obtain a reference to the service we are after in the remote BLE server.
+  BLERemoteService* pRemoteService1 = pClient1->getService(serviceUUID1);
+  if (pRemoteService1 == nullptr) {
+    Serial.print("Failed to find our service UUID1: ");
+    Serial.println(serviceUUID1.toString().c_str());
+    return;
+  }
+
+  // Obtain a reference to the characteristics in the service of the remote BLE server.
+  BLERemoteCharacteristic* pCharacteristic1 = pRemoteService1->getCharacteristic(charUUID1);
+  if (pCharacteristic1 == nullptr) {
+    Serial.print("Failed to find our characteristic UUID1");
+    return;
+  }
+
+  pCharacteristic1->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData1, size_t length, bool isNotify) {
+    Serial.println("Notify received");
+    Serial.print("Value: ");
+    Serial.println(*pData1);
+  });
+
+//Same codes but for a second client to connect to second server.
   BLEScan* pBLEScan2 = BLEDevice::getScan();
   pBLEScan2->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks2());
   pBLEScan2->setActiveScan(true);
@@ -81,15 +103,6 @@ void setup() {
   pClient2->connect(*pServerAddress2);
   Serial.println(" - Connected to server2");
 
-
-  // Obtain a reference to the service we are after in the remote BLE server.
-  BLERemoteService* pRemoteService1 = pClient1->getService(serviceUUID1);
-  if (pRemoteService1 == nullptr) {
-    Serial.print("Failed to find our service UUID1: ");
-    Serial.println(serviceUUID1.toString().c_str());
-    return;
-  }
-
   BLERemoteService* pRemoteService2 = pClient2->getService(serviceUUID2);
   if (pRemoteService2 == nullptr) {
     Serial.print("Failed to find our service UUID2: ");
@@ -97,36 +110,26 @@ void setup() {
     return;
   }
   
-  // Obtain a reference to the characteristics in the service of the remote BLE server.
-  BLERemoteCharacteristic* pCharacteristic1 = pRemoteService1->getCharacteristic(charUUID1);
-  if (pCharacteristic1 == nullptr) {
-    Serial.print("Failed to find our characteristic UUID1");
-    return;
-  }
   BLERemoteCharacteristic* pCharacteristic2 = pRemoteService2->getCharacteristic(charUUID2);
   if (pCharacteristic2 == nullptr) {
     Serial.print("Failed to find our characteristic UUID2");
     return;
   }
-  
-  pCharacteristic1->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData1, size_t length, bool isNotify) {
-    Serial.println("Notify received");
-    Serial.print("Value: ");
-    Serial.println(*pData1);
-  });
 
   pCharacteristic2->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData2, size_t length, bool isNotify) {
     Serial.println("Notify received");
     Serial.print("Value: ");
     Serial.println(*pData2);
   });
+  
   connected = true;
 }
-
+BLERemoteService* pRemoteService1;
+BLERemoteCharacteristic* pCharacteristic;
 void loop() {
   if (connected) {
-    BLERemoteService* pRemoteService1 = pClient1->getService(serviceUUID1);
-    BLERemoteCharacteristic* pCharacteristic = pRemoteService1->getCharacteristic(charUUID1);
+    pRemoteService1 = pClient1->getService(serviceUUID1);
+    pCharacteristic = pRemoteService1->getCharacteristic(charUUID1);
     pCharacteristic->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData1, size_t length, bool isNotify) {
       Serial.println("Notify received");
       memcpy(receivedData, pData1, 8);
@@ -135,7 +138,7 @@ void loop() {
       Serial.print("Byte ");
       Serial.print(i);
       Serial.print(": ");
-      Serial.println(receivedData[i], HEX);  // Print in HEX format
+      Serial.println(receivedData[i]);  // Print in HEX format
     }
     });
     BLERemoteService* pRemoteService2 = pClient2->getService(serviceUUID2);
