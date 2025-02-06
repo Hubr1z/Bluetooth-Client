@@ -26,7 +26,6 @@ BLEUUID charUUID1(CHARACTERISTIC_UUID_NODE1);
 BLEUUID serviceUUID2(SERVICE_UUID_NODE2);
 BLEUUID charUUID2(CHARACTERISTIC_UUID_NODE2);    
 
-uint8_t receivedData[8];
 
 //Callback function that gets called, when another device's advertisement has been received
 class MyAdvertisedDeviceCallbacks1: public BLEAdvertisedDeviceCallbacks {
@@ -50,7 +49,6 @@ class MyAdvertisedDeviceCallbacks2: public BLEAdvertisedDeviceCallbacks {
 };
 
 void setup() {
-  memset(receivedData, 0, sizeof(receivedData));
 
   Serial.begin(115200);
   
@@ -111,33 +109,46 @@ void setup() {
   
   pCharacteristic1->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData1, size_t length, bool isNotify) {
     Serial.println("Notify received");
-    Serial.print("Value: ");
+    Serial.print("Value1: ");
     Serial.println(*pData1);
   });
 
   pCharacteristic2->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData2, size_t length, bool isNotify) {
     Serial.println("Notify received");
-    Serial.print("Value: ");
+    Serial.print("Value2: ");
     Serial.println(*pData2);
   });
   connected = true;
 }
 
+static uint8_t receivedData1[8] = {0};
+uint8_t *rcvDataPtr1 = receivedData1;
+static uint8_t receivedData2[8] = {0};
+uint8_t *rcvDataPtr2 = receivedData2;
+
 void loop() {
   if (connected) {
     BLERemoteService* pRemoteService1 = pClient1->getService(serviceUUID1);
-    BLERemoteCharacteristic* pCharacteristic = pRemoteService1->getCharacteristic(charUUID1);
-    pCharacteristic->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData1, size_t length, bool isNotify) {
+    BLERemoteCharacteristic* pCharacteristic1 = pRemoteService1->getCharacteristic(charUUID1);
+    pCharacteristic1->registerForNotify([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData1, size_t length, bool isNotify) {
       Serial.println("Notify received");
-      Serial.print("Value: ");
-      Serial.println(*pData1);
-    });
+      Serial.print("Value1: ");
+      for (int i = 0; i < 8; i++){
+      Serial.print(*(pData1+i));
+      Serial.print(",");
+      }
+      Serial.println("");
+      });
     BLERemoteService* pRemoteService2 = pClient2->getService(serviceUUID2);
     BLERemoteCharacteristic* pCharacteristic2 = pRemoteService2->getCharacteristic(charUUID2);
-    pCharacteristic->registerForNotify ([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData2, size_t length, bool isNotify) {
+    pCharacteristic2->registerForNotify ([](BLERemoteCharacteristic* pBLERemoteCharacteristic, uint8_t* pData2, size_t length, bool isNotify) {
       Serial.println("Notify received");
-      Serial.print("Value: ");
-      Serial.println(*pData2);
+      Serial.print("Value2: ");
+      for (int i = 0; i < 8; i++){
+      Serial.print(*(pData2+i));
+      Serial.print(",");
+      }
+      Serial.println("");
     });
   }
   delay(1000);
