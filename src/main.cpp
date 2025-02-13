@@ -23,7 +23,7 @@ static BLEUUID charUUID2(CHARACTERISTIC_UUID_NODE2);
 
 static boolean doConnect[2] = {false};
 static boolean connected[2] = {false};
-static boolean doScan = false;
+static boolean doScan[2] = {false};
 static BLERemoteCharacteristic *pRemoteCharacteristic;
 static BLEAdvertisedDevice *myDevice;
 
@@ -55,14 +55,14 @@ class MyClientCallback : public BLEClientCallbacks {
   }
 };
 
-bool connectToServer(BLEUUID *serviceUUID, BLEUUID *charUUID) {
+bool connectToServer(BLEUUID *serviceUUID, BLEUUID *charUUID, int i) {
   Serial.print("Forming a connection to ");
   Serial.println(myDevice->getAddress().toString().c_str());
 
   BLEClient *pClient = BLEDevice::createClient();
   Serial.println(" - Created client");
 
-  pClient->setClientCallbacks(new MyClientCallback(0));
+  pClient->setClientCallbacks(new MyClientCallback(i));
 
   // Connect to the remove BLE Server.
   pClient->connect(myDevice);  // if you pass BLEAdvertisedDevice instead of address, it will be recognized type of peer device address (public or private)
@@ -73,7 +73,7 @@ bool connectToServer(BLEUUID *serviceUUID, BLEUUID *charUUID) {
   BLERemoteService *pRemoteService = pClient->getService(*serviceUUID);
   if (pRemoteService == nullptr) {
     Serial.print("Failed to find our service UUID: ");
-    Serial.println(serviceUUID1.toString().c_str());
+    Serial.println(serviceUUID -> toString().c_str());
     pClient->disconnect();
     return false;
   }
@@ -83,7 +83,7 @@ bool connectToServer(BLEUUID *serviceUUID, BLEUUID *charUUID) {
   pRemoteCharacteristic = pRemoteService->getCharacteristic(*charUUID);
   if (pRemoteCharacteristic == nullptr) {
     Serial.print("Failed to find our characteristic UUID: ");
-    Serial.println(charUUID1.toString().c_str());
+    Serial.println(charUUID -> toString().c_str());
     pClient->disconnect();
     return false;
   }
@@ -101,7 +101,7 @@ bool connectToServer(BLEUUID *serviceUUID, BLEUUID *charUUID) {
   }
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P18);
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P18);
-  connected[0] = true;
+  connected[i] = true;
   return true;
 }
 /**
@@ -129,7 +129,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
       BLEDevice::getScan()->stop();
       myDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnect[j] = true;
-      doScan = true;
+      doScan[j] = true;
 
     }  // Found our server
 
@@ -154,7 +154,6 @@ void setup() {
   BLEDevice::init("");
 
   scanSetUp(&serviceUUID1, 0);
-  scanSetUp(&serviceUUID2, 1);
 
 
 }  // End of setup.
@@ -166,7 +165,7 @@ void loop() {
   // BLE Server with which we wish to connect.  Now we connect to it.  Once we are
   // connected we set the connected flag to be true.
   if (doConnect[0] == true) {
-    if (connectToServer(&serviceUUID1, &charUUID1)) {
+    if (connectToServer(&serviceUUID1, &charUUID1, 0)) {
       Serial.println("We are now connected to the BLE Node 1.");
     } else {
       Serial.println("We have failed to connect to server 1; there is nothing more we will do.");
@@ -174,25 +173,19 @@ void loop() {
     doConnect[0] = false;
   }
 
-  if (doConnect[1] == true) {
-    if (connectToServer(&serviceUUID2, &charUUID2)) {
-      Serial.println("We are now connected to the BLE Node 2.");
-    } else {
-      Serial.println("We have failed to connect to server 2; there is nothing more we will do.");
-    }
-    doConnect[1] = false;
-  }
 
   // If we are connected to a peer BLE Server, update the characteristic each time we are reached
   // with the current time since boot.
-  if (connected[0] && connected[1]) {
+  if (connected[0]) {
     String newValue = "Time since boot: " + String(millis() / 1000);
     Serial.println("Setting new characteristic value to \"" + newValue + "\"");
 
     // Set the characteristic's value to be the array of bytes that is actually a string.
     pRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
-  } else if (doScan) {
+  } 
+  else if (doScan[0]) {
     BLEDevice::getScan()->start(0);  // this is just example to start scan after disconnect, most likely there is better way to do it in arduino
+
   }
 
   delay(1000);  // Delay a second between loops.
