@@ -24,10 +24,10 @@ static BLEUUID charUUID2(CHARACTERISTIC_UUID_NODE2);
 static boolean doConnect[2] = {false};
 static boolean connected[2] = {false};
 static boolean doScan[2] = {false};
-static BLERemoteCharacteristic *pRemoteCharacteristic1;
-static BLEAdvertisedDevice *myDevice1;
+static BLERemoteCharacteristic *pRemoteCharacteristic1, *pRemoteCharacteristic2;
+static BLEAdvertisedDevice *myDevice1, *myDevice2;
 
-static void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify) {
+void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify) {
   Serial.print("Notify callback for characteristic ");
   Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
   Serial.print(" of data length ");
@@ -117,7 +117,6 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
   private:
   BLEUUID serviceUUIDObject;
   BLEAdvertisedDevice **myDeviceObject;
-
   int j;
   /**
    * Called for each advertising BLE server.
@@ -156,6 +155,7 @@ void setup() {
   BLEDevice::init("");
 
   scanSetUp(&serviceUUID1, &myDevice1, 0);
+  scanSetUp(&serviceUUID2, &myDevice2, 1);
 
 
 }  // End of setup.
@@ -166,13 +166,22 @@ void loop() {
   // If the flag "doConnect" is true then we have scanned for and found the desired
   // BLE Server with which we wish to connect.  Now we connect to it.  Once we are
   // connected we set the connected flag to be true.
-  if (doConnect[0] == true) {
+  if (doConnect[0]) {
     if (connectToServer(&serviceUUID1, &charUUID1, &pRemoteCharacteristic1, &myDevice1, 0)) {
       Serial.println("We are now connected to the BLE Node 1.");
     } else {
       Serial.println("We have failed to connect to server 1; there is nothing more we will do.");
     }
     doConnect[0] = false;
+  }
+
+  if (doConnect[1]) {
+    if (connectToServer(&serviceUUID2, &charUUID2, &pRemoteCharacteristic2, &myDevice2, 1)) {
+      Serial.println("We are now connected to the BLE Node 2.");
+    } else {
+      Serial.println("We have failed to connect to server 2; there is nothing more we will do.");
+    }
+    doConnect[1] = false;
   }
 
 
@@ -185,8 +194,17 @@ void loop() {
 
     // Set the characteristic's value to be the array of bytes that is actually a string.
     pRemoteCharacteristic1->writeValue(newValue.c_str(), newValue.length());
+  }
+
+  if (connected[1]) {
+    String newValue = "Time since boot: " + String(millis() / 1000);
+    Serial.println("Setting new characteristic value to \"" + newValue + "\"");
+
+    // Set the characteristic's value to be the array of bytes that is actually a string.
+    pRemoteCharacteristic2->writeValue(newValue.c_str(), newValue.length());
   } 
-  else if (doScan[0]) {
+
+  else if (doScan[0] || doScan[1]) {
     BLEDevice::getScan()->start(0);  // this is just example to start scan after disconnect, most likely there is better way to do it in arduino
 
   }
