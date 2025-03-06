@@ -184,7 +184,7 @@ void loop() {
     doConnect[1] = false;
   }
 
-
+  
 
   // If we are connected to a peer BLE Server, update the characteristic each time we are reached
   // with the current time since boot.
