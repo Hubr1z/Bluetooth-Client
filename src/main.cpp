@@ -13,6 +13,7 @@
 #define bleServerName1 "XIAOESP32C6_BLE_SENDER1"
 #define bleServerName2 "XIAOESP32C6_BLE_SENDER2"
 
+#define SENSOR_THRESHOLD 80
 // The remote service we wish to connect to.
 static BLEUUID serviceUUID1(SERVICE_UUID_NODE1);
 // The characteristic of the remote service we are interested in.
@@ -27,17 +28,56 @@ static boolean doScan[2] = {false};
 static BLERemoteCharacteristic *pRemoteCharacteristic1, *pRemoteCharacteristic2;
 static BLEAdvertisedDevice *myDevice1, *myDevice2;
 
+static boolean data1State[8] = {false};
+static boolean data2State[8] = {false};
+static int data1[8] = {0};
+static int data2[8] = {0};
+
+int thresholdFunction(int *data, boolean *dataState) {
+  int total = 0;
+  for (int i = 0; i < 8; i++) {
+    if (*(data + i) > SENSOR_THRESHOLD) {
+      *(dataState + i) = 1;
+    } else {
+      *(dataState + i) = 0;
+    }
+  }
+  for (int i = 0; i < 8; i++) {
+    total += *(dataState + i);
+  }
+  return total;
+}
+
 void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify) {
-  Serial.print("Notify callback for characteristic ");
-  Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
-  Serial.print(" of data length ");
-  Serial.println(length);
-  Serial.print("data: ");
-      for (int i = 0; i < 8; i++){
-      Serial.print(*(pData+i));
-      Serial.print(",");
-      }
-  Serial.println();
+  //For gates debug
+  // Serial.print("Notify callback for characteristic ");
+  // Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
+  // Serial.print(" of data length ");
+  // Serial.println(length);
+  // Serial.print("data: ");
+  //     for (int i = 0; i < 8; i++){
+  //     Serial.print(*(pData+i));
+  //     Serial.print(",");
+  //     }
+  // Serial.println();
+
+  // Check the UUID to determine which device (Node 1 or Node 2) sent the notification
+  if (pBLERemoteCharacteristic->getUUID().equals(charUUID1)) {
+    // Node 1 - copy data to data1
+    for (int i = 0; i < 8; i++) {
+      data1[i] = pData[i];
+      // If you want to track the state based on the threshold, you can do this:
+      data1State[i] = (data1[i] > SENSOR_THRESHOLD);
+    }
+  }
+  else if (pBLERemoteCharacteristic->getUUID().equals(charUUID2)) {
+    // Node 2 - copy data to data2
+    for (int i = 0; i < 8; i++) {
+      data2[i] = pData[i];
+      // If you want to track the state based on the threshold, you can do this:
+      data2State[i] = (data2[i] > SENSOR_THRESHOLD);
+    }
+  }
 }
 
 class MyClientCallback : public BLEClientCallbacks {
@@ -188,26 +228,61 @@ void loop() {
 
   // If we are connected to a peer BLE Server, update the characteristic each time we are reached
   // with the current time since boot.
-  if (connected[0]) {
-    String newValue = "Time since boot: " + String(millis() / 1000);
-    Serial.println("Setting new characteristic value to \"" + newValue + "\"");
+  // if (connected[0]) {
+  //   String newValue = "Time since boot: " + String(millis() / 1000);
+  //   Serial.println("Setting new characteristic value to \"" + newValue + "\"");
 
-    // Set the characteristic's value to be the array of bytes that is actually a string.
-    pRemoteCharacteristic1->writeValue(newValue.c_str(), newValue.length());
-  }
+  //   // Set the characteristic's value to be the array of bytes that is actually a string.
+  //   pRemoteCharacteristic1->writeValue(newValue.c_str(), newValue.length());
+  // }
 
-  if (connected[1]) {
-    String newValue = "Time since boot: " + String(millis() / 1000);
-    Serial.println("Setting new characteristic value to \"" + newValue + "\"");
+  // if (connected[1]) {
+  //   String newValue = "Time since boot: " + String(millis() / 1000);
+  //   Serial.println("Setting new characteristic value to \"" + newValue + "\"");
 
-    // Set the characteristic's value to be the array of bytes that is actually a string.
-    pRemoteCharacteristic2->writeValue(newValue.c_str(), newValue.length());
-  } 
+  //   // Set the characteristic's value to be the array of bytes that is actually a string.
+  //   pRemoteCharacteristic2->writeValue(newValue.c_str(), newValue.length());
+  // } 
+  
 
-  else if (doScan[0] || doScan[1]) {
+  if (doScan[0] || doScan[1]) {
     BLEDevice::getScan()->start(0);  // this is just example to start scan after disconnect, most likely there is better way to do it in arduino
-
   }
 
-  delay(1000);  // Delay a second between loops.
+  //Human Crowdedness Algorithm  
+  int total1 = thresholdFunction(data1 , data1State);
+  int total2 = thresholdFunction(data2 , data2State);
+  int total = total1 + total2;
+
+  if(0 < total < 4) {
+    switch(total) {
+      case 0: {
+        Serial.println("0 people detected");
+      }
+      //0 ppl
+        break;
+      case 1: {
+        Serial.println("1 people detected");
+      }
+      //should'nt be possible but 1 if so
+        break;
+      case 2: {
+        Serial.println("1 people detected");
+      }
+      //1 ppl
+        break;
+      case 3: {
+        Serial.println("2 people detected");
+      }
+      //2 ppl
+        break;
+      default: 
+      Serial.println("error");
+      //more than 2 ppl
+      }
+    }
+    else {
+      Serial.println("more than 2 people detected");
+    }
+    // Delay a second between loops.
 }  // End of loop
