@@ -33,6 +33,9 @@ static boolean data2State[8] = {false};
 static int data1[8] = {0};
 static int data2[8] = {0};
 
+static boolean doOutputFlag1 = false;
+static boolean doOutputFlag2 = false;
+
 int thresholdFunction(int *data, boolean *dataState) {
   int total = 0;
   for (int i = 0; i < 8; i++) {
@@ -49,7 +52,7 @@ int thresholdFunction(int *data, boolean *dataState) {
 }
 
 void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify) {
-  //For gates debug
+  // // For gates debug
   // Serial.print("Notify callback for characteristic ");
   // Serial.print(pBLERemoteCharacteristic->getUUID().toString().c_str());
   // Serial.print(" of data length ");
@@ -69,6 +72,7 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *
       // If you want to track the state based on the threshold, you can do this:
       data1State[i] = (data1[i] > SENSOR_THRESHOLD);
     }
+    doOutputFlag1 = true;
   }
   else if (pBLERemoteCharacteristic->getUUID().equals(charUUID2)) {
     // Node 2 - copy data to data2
@@ -77,6 +81,7 @@ void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *
       // If you want to track the state based on the threshold, you can do this:
       data2State[i] = (data2[i] > SENSOR_THRESHOLD);
     }
+    doOutputFlag2 = true;
   }
 }
 
@@ -189,8 +194,83 @@ void scanSetUp(BLEUUID *serviceUUID, BLEAdvertisedDevice **myDevice, int i) {
 // have detected a new device.  Specify that we want active scanning and start the
 // scan to run for 5 seconds. But now a function.
 
+void serialReportISR (void *arg) {
+if (connected[0] && connected[1]) {
+//Human Crowdedness Algorithm  
+int total1 = thresholdFunction(data1 , data1State);
+int total2 = thresholdFunction(data2 , data2State);
+int total = total1 + total2;
+
+  // Serial.print("Notify callback for characteristic ");
+  // Serial.print(CHARACTERISTIC_UUID_NODE1);
+  // Serial.print(" of data length ");
+  // Serial.println(8);
+  // Serial.print("data: ");
+  //     for (int i = 0; i < 8; i++){
+  //     Serial.print(data1[i]);
+  //     Serial.print(",");
+  //     }
+  // Serial.println();
+
+  //   Serial.print("Notify callback for characteristic ");
+  // Serial.print(CHARACTERISTIC_UUID_NODE2);
+  // Serial.print(" of data length ");
+  // Serial.println(8);
+  // Serial.print("data: ");
+  //     for (int i = 0; i < 8; i++){
+  //     Serial.print(data2[i]);
+  //     Serial.print(",");
+  //     }
+  // Serial.println();
+
+if((0 <= total) && (total < 4)) {
+  switch(total) {
+    case 0: {
+      Serial.println("0 people detected");
+    }
+    //0 ppl
+      break;
+    case 1: {
+      Serial.println("1 people detected");
+    }
+    //should'nt be possible but 1 if so
+      break;
+    case 2: {
+      Serial.println("1 people detected");
+    }
+    //1 ppl
+      break;
+    case 3: {
+      Serial.println("2 people detected");
+    }
+    //2 ppl
+      break;
+    default: 
+    Serial.println("yikes");
+    }
+  }
+  else {
+    Serial.println("more than 2 people detected");
+  }
+  //more than 2 ppl
+  }
+};
+
 void setup() {
   Serial.begin(115200);
+
+  esp_timer_handle_t serialReport;
+  esp_timer_create_args_t serialReportTimer = {
+    .callback = serialReportISR,        //!< Function to call when timer expires
+    .arg = nullptr,                          //!< Argument to pass to the callback
+    .dispatch_method = ESP_TIMER_TASK,   //!< Call the callback from task or from ISR
+    .name = "Timer_Serial_Report",               //!< Timer name, used in esp_timer_dump function
+    .skip_unhandled_events = true,     //!< Skip unhandled events for periodic timers
+  };
+  esp_timer_create(&serialReportTimer, &serialReport);
+  esp_timer_start_periodic(serialReport, 1000000);
+
+
   Serial.println("Starting Arduino BLE Client application...");
   BLEDevice::init("");
 
@@ -245,44 +325,8 @@ void loop() {
   // } 
   
 
-  if (doScan[0] || doScan[1]) {
+  else if (doScan[0] || doScan[1]) {
     BLEDevice::getScan()->start(0);  // this is just example to start scan after disconnect, most likely there is better way to do it in arduino
   }
-
-  //Human Crowdedness Algorithm  
-  int total1 = thresholdFunction(data1 , data1State);
-  int total2 = thresholdFunction(data2 , data2State);
-  int total = total1 + total2;
-
-  if(0 < total < 4) {
-    switch(total) {
-      case 0: {
-        Serial.println("0 people detected");
-      }
-      //0 ppl
-        break;
-      case 1: {
-        Serial.println("1 people detected");
-      }
-      //should'nt be possible but 1 if so
-        break;
-      case 2: {
-        Serial.println("1 people detected");
-      }
-      //1 ppl
-        break;
-      case 3: {
-        Serial.println("2 people detected");
-      }
-      //2 ppl
-        break;
-      default: 
-      Serial.println("error");
-      //more than 2 ppl
-      }
-    }
-    else {
-      Serial.println("more than 2 people detected");
-    }
     // Delay a second between loops.
 }  // End of loop
