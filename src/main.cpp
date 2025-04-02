@@ -201,6 +201,7 @@ int total1 = thresholdFunction(data1 , data1State);
 int total2 = thresholdFunction(data2 , data2State);
 int total = total1 + total2;
 
+//Serial output for debug purposes
   // Serial.print("Notify callback for characteristic ");
   // Serial.print(CHARACTERISTIC_UUID_NODE1);
   // Serial.print(" of data length ");
